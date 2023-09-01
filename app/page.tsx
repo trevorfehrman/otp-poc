@@ -1,113 +1,172 @@
-import Image from 'next/image'
+'use client';
+import * as React from 'react';
+
+const RE_DIGIT = new RegExp(/^\d+$/);
+
+type OTPProps = {
+  value: string;
+  valueLength: number;
+  onChange: (value: string) => void;
+};
+
+function OTP({ value, valueLength, onChange }: OTPProps) {
+  const valueItems = React.useMemo(() => {
+    const valueArray = value.split('');
+    const items: Array<string> = [];
+
+    for (let i = 0; i < valueLength; i++) {
+      const char = valueArray[i];
+
+      if (RE_DIGIT.test(char)) {
+        items.push(char);
+      } else {
+        items.push('');
+      }
+    }
+
+    return items;
+  }, [value, valueLength]);
+
+  const focusToNextInput = (target: HTMLElement) => {
+    const nextElementSibling = target.nextElementSibling as HTMLInputElement | null;
+
+    if (nextElementSibling) {
+      nextElementSibling.focus();
+    }
+  };
+  const focusToPrevInput = (target: HTMLElement) => {
+    const previousElementSibling = target.previousElementSibling as HTMLInputElement | null;
+
+    if (previousElementSibling) {
+      previousElementSibling.focus();
+    }
+  };
+
+  const inputOnChange = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    const target = e.target;
+    let targetValue = target.value.trim();
+    const isTargetValueDigit = RE_DIGIT.test(targetValue);
+
+    if (!isTargetValueDigit && targetValue !== '') {
+      return;
+    }
+    if (!isTargetValueDigit && targetValue !== '') {
+      return;
+    }
+
+    const nextInputEl = target.nextElementSibling as HTMLInputElement | null;
+
+    // only delete digit if next input element has no value
+    if (!isTargetValueDigit && nextInputEl && nextInputEl.value !== '') {
+      return;
+    }
+
+    targetValue = isTargetValueDigit ? targetValue : ' ';
+
+    const targetValueLength = targetValue.length;
+
+    if (targetValueLength === 1) {
+      const newValue = value.substring(0, idx) + targetValue + value.substring(idx + 1);
+
+      onChange(newValue);
+
+      if (!isTargetValueDigit) {
+        return;
+      }
+
+      focusToNextInput(target);
+
+      const nextElementSibling = target.nextElementSibling as HTMLInputElement | null;
+
+      if (nextElementSibling) {
+        nextElementSibling.focus();
+      }
+    } else if (targetValueLength === valueLength) {
+      onChange(targetValue);
+
+      target.blur();
+    }
+  };
+
+  const inputOnKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const { key } = e;
+    const target = e.target as HTMLInputElement;
+
+    const targetValue = target.value;
+
+    if (key === 'ArrowRight' || key === 'ArrowDown') {
+      e.preventDefault();
+      return focusToNextInput(target);
+    }
+
+    if (key === 'ArrowLeft' || key === 'ArrowUp') {
+      e.preventDefault();
+      return focusToPrevInput(target);
+    }
+
+    // keep the selection range position
+    // if the same digit was typed
+    target.setSelectionRange(0, targetValue.length);
+
+    if (e.key !== 'Backspace' || target.value !== '') {
+      return;
+    }
+
+    const previousElementSibling = target.previousElementSibling as HTMLInputElement | null;
+
+    if (previousElementSibling) {
+      previousElementSibling.focus();
+    }
+
+    if (e.key !== 'Backspace' || targetValue !== '') {
+      return;
+    }
+
+    focusToPrevInput(target);
+  };
+
+  const inputOnFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { target } = e;
+
+    // keep focusing back until previous input
+    // element has value
+    const prevInputEl = target.previousElementSibling as HTMLInputElement | null;
+
+    if (prevInputEl && prevInputEl.value === '') {
+      return prevInputEl.focus();
+    }
+
+    target.setSelectionRange(0, target.value.length);
+  };
+
+  return (
+    <div className='flex w-full max-w-sm gap-x-3'>
+      {valueItems.map((digit, idx) => (
+        <input
+          key={idx}
+          type='text'
+          inputMode='numeric'
+          autoComplete='one-time-code'
+          pattern='\d{1}'
+          maxLength={valueLength}
+          className='w-full h-16 border-gray-800 text-center rounded-md text-4xl font-bold border'
+          value={digit}
+          onChange={e => inputOnChange(e, idx)}
+          onKeyDown={inputOnKeyDown}
+          onFocus={inputOnFocus}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
+  const [otp, setOtp] = React.useState('');
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    <div className='w-full max-w-3xl mx-auto px-4 py-5'>
+      <h1>Hi Bulldogs!</h1>
+      <h2>Test Code: 123456</h2>
+      <OTP value={otp} valueLength={6} onChange={setOtp} />
+    </div>
+  );
 }
